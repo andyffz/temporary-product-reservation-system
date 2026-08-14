@@ -784,14 +784,336 @@
       opacity: 1;
     }
 
+    /* ===== 缺失的 CSS 类（阶段3前端补全）===== */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-bar select,
+    .filter-bar input[type="date"] {
+      padding: 6px 10px;
+      border: 1px solid var(--avh-border);
+      border-radius: var(--avh-radius-sm);
+      font-size: 13px;
+      background: var(--avh-card);
+      font-family: inherit;
+      color: var(--avh-foreground);
+    }
+
+    .filter-bar select:focus,
+    .filter-bar input:focus {
+      outline: none;
+      border-color: var(--avh-primary);
+      box-shadow: 0 0 0 2px var(--avh-primary-soft);
+    }
+
+    .pickup-search {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .pickup-search input {
+      flex: 1;
+      max-width: 200px;
+      padding: 8px 12px;
+      border: 2px solid var(--avh-info);
+      border-radius: var(--avh-radius-sm);
+      font-size: 16px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      text-align: center;
+      font-family: monospace;
+      background: var(--avh-card);
+    }
+
+    .pickup-search input:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--avh-info-soft);
+    }
+
+    .batch-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: var(--avh-info-soft);
+      border-radius: var(--avh-radius-sm);
+      margin-bottom: 12px;
+      transition: opacity .2s;
+    }
+
+    .batch-bar.hidden {
+      display: none;
+    }
+
+    .batch-bar .sel-info {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--avh-info);
+    }
+
+    .batch-bar .chk-all-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .pickup-badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--avh-info-soft);
+      color: var(--avh-info);
+      font-weight: 600;
+      font-family: monospace;
+      letter-spacing: .05em;
+    }
+
+    .order-checkbox {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--avh-info);
+    }
+
+    .order.highlight {
+      animation: highlight-flash 2s ease;
+    }
+
+    @keyframes highlight-flash {
+      0%, 100% { box-shadow: var(--avh-shadow-1); }
+      50% { box-shadow: 0 0 0 3px var(--avh-info); }
+    }
+
+    /* ===== 响应式：平板 (641px - 1024px) ===== */
+    @media (max-width: 1024px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .wrap {
+        padding: 20px 16px 60px;
+      }
+
+      .section {
+        padding: 16px;
+      }
+
+      table.tb {
+        font-size: 13px;
+      }
+
+      table.tb th,
+      table.tb td {
+        padding: 8px 10px;
+      }
+    }
+
+    /* ===== 响应式：手机 (≤640px) ===== */
     @media (max-width: 640px) {
+      .wrap {
+        padding: 10px 8px 60px;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .topbar h1 {
+        font-size: 20px;
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .kpi {
+        padding: 12px 14px;
+      }
+
       .kpi .value {
-        font-size: 22px;
+        font-size: 20px;
+      }
+
+      .kpi .label {
+        font-size: 11px;
+      }
+
+      .section {
+        padding: 12px;
+        margin-bottom: 14px;
+      }
+
+      .section-title {
+        flex-direction: column;
+        align-items: flex-start;
+        font-size: 16px;
+        gap: 10px;
+      }
+
+      .section-title .actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .section-title .actions .btn {
+        flex: 1;
+        text-align: center;
+        font-size: 12px;
+        padding: 8px 8px;
+        min-width: 0;
+      }
+
+      /* 表格 → 卡片布局 */
+      table.tb {
+        min-width: 0;
+        font-size: 13px;
+      }
+
+      table.tb thead {
+        display: none;
+      }
+
+      table.tb tbody tr {
+        display: block;
+        border: 1px solid var(--avh-border);
+        border-radius: var(--avh-radius-sm);
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        background: var(--avh-card);
+      }
+
+      table.tb tbody tr:hover {
+        background: var(--avh-card);
+      }
+
+      table.tb tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--avh-muted);
+        text-align: right;
+      }
+
+      table.tb tbody td:last-child {
+        border-bottom: none;
+      }
+
+      table.tb tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--avh-muted-foreground);
+        margin-right: 12px;
+        text-align: left;
+        flex-shrink: 0;
+      }
+
+      table.tb tbody td[colspan] {
+        display: block;
+        text-align: center;
+        padding: 8px 0;
+      }
+
+      table.tb tbody td[colspan]::before {
+        display: none;
+      }
+
+      table.tb td.num,
+      table.tb th.num {
+        text-align: right;
+      }
+
+      .stock-ctl {
+        flex-wrap: nowrap;
+      }
+
+      table.tb .bar {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .search {
+        flex-direction: column;
+      }
+
+      .search input {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .order-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 4px;
+      }
+
+      .order-tab {
+        flex-shrink: 0;
+        white-space: nowrap;
       }
 
       .order-head {
         flex-direction: column;
         align-items: flex-start;
+      }
+
+      .form-row {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .form-field {
+        min-width: 0;
+      }
+
+      .filter-bar {
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .filter-bar select,
+      .filter-bar input[type="date"] {
+        width: 100%;
+      }
+
+      .batch-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .batch-bar .btn {
+        text-align: center;
+      }
+
+      .pickup-search {
+        flex-direction: row;
+      }
+
+      .pickup-search input {
+        flex: 1;
+        max-width: none;
+      }
+
+      .product-form {
+        padding: 12px;
       }
     }
 
@@ -1088,6 +1410,37 @@
         <input id="searchInput" type="search" placeholder="🔍 搜索姓名 / 联系方式 / 备注 / 商品…">
         <button class="btn" id="clearSearchBtn" type="button">清空</button>
       </div>
+      <!-- 取货码搜索 -->
+      <div class="pickup-search">
+        <input id="pickupSearchInput" type="text" placeholder="🎫 取货码查询…" maxlength="6">
+        <button class="btn" id="pickupSearchBtn" type="button">查找取货</button>
+      </div>
+      <!-- 筛选栏 -->
+      <div class="filter-bar">
+        <select id="filterName">
+          <option value="">全部姓名</option>
+        </select>
+        <select id="filterProduct">
+          <option value="">全部商品</option>
+        </select>
+        <input type="date" id="filterDateFrom" title="开始日期">
+        <span style="color:var(--avh-muted-foreground)">~</span>
+        <input type="date" id="filterDateTo" title="结束日期">
+        <select id="filterPicked">
+          <option value="">全部状态</option>
+          <option value="pending">未取货</option>
+          <option value="picked">已取货</option>
+        </select>
+        <button class="btn" id="clearFilterBtn" type="button">清除筛选</button>
+      </div>
+      <!-- 批量操作栏 -->
+      <div class="batch-bar hidden" id="batchBar">
+        <label class="chk-all-wrap"><input type="checkbox" id="selectAllChk" class="order-checkbox"> 全选</label>
+        <span class="sel-info" id="selCount">已选 0 条</span>
+        <button class="btn success" id="batchPickupBtn" type="button">✓ 批量取货</button>
+        <button class="btn" id="batchCancelPickupBtn" type="button">↩ 批量取消取货</button>
+        <button class="btn danger" id="batchDeleteBtn" type="button">🗑 批量删除</button>
+      </div>
       <div id="ordersWrap"></div>
     </div>
   </div>
@@ -1104,6 +1457,7 @@
     let apiMode = false;
     let stock = {};
     let orders = [];
+    let selectedOrders = new Set();
 
     // ====== Token 管理 ======
     function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
@@ -1270,15 +1624,15 @@
         const dealTag = p.deal ? `<span class="mode-pill" style="font-size:11px">${escapeHtml(p.deal)}</span>` : '—';
         html += `
           <tr>
-            <td>${p.id}</td>
-            <td><b>${escapeHtml(p.name)}</b>${p.note ? `<div style="font-size:12px;color:var(--avh-muted-foreground)">${escapeHtml(p.note)}</div>` : ''}</td>
-            <td>${escapeHtml(p.unit || '')}</td>
-            <td class="num">${p.price}</td>
-            <td class="num">${p.step}</td>
-            <td class="num">${p.total}</td>
-            <td style="font-size:13px;color:var(--avh-muted-foreground)">${escapeHtml(p.date || '—')}${expiredBadge}</td>
-            <td>${dealTag}</td>
-            <td>
+            <td data-label="#">${p.id}</td>
+            <td data-label="名称"><b>${escapeHtml(p.name)}</b>${p.note ? `<div style="font-size:12px;color:var(--avh-muted-foreground)">${escapeHtml(p.note)}</div>` : ''}</td>
+            <td data-label="单位">${escapeHtml(p.unit || '')}</td>
+            <td data-label="单价" class="num">${p.price}</td>
+            <td data-label="步进" class="num">${p.step}</td>
+            <td data-label="库存" class="num">${p.total}</td>
+            <td data-label="日期" style="font-size:13px;color:var(--avh-muted-foreground)">${escapeHtml(p.date || '—')}${expiredBadge}</td>
+            <td data-label="促销">${dealTag}</td>
+            <td data-label="操作">
               <button class="mini-btn" type="button" onclick="editProduct(${p.id})" title="编辑">✎</button>
               <button class="mini-btn danger" type="button" onclick="deleteProduct(${p.id})" title="删除">✕</button>
             </td>
@@ -1422,14 +1776,14 @@
         const soldOutBadge = remain <= 0 ? '<span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:var(--avh-danger-soft);color:var(--avh-danger);font-weight:600;margin-left:6px">已售罄</span>' : '';
         html += `
           <tr${remain <= 0 ? ' style="opacity:.7;background:#fafafa"' : ''}>
-            <td>${p.id}</td>
-            <td><b>${p.name}</b>${soldOutBadge}<div style="font-size:12px;color:var(--avh-muted-foreground)">${p.unit} · 到期 ${p.date}</div></td>
-            <td style="color:var(--avh-primary);font-weight:600">${p.priceLabel}</td>
-            <td class="num">${p.total}</td>
-            <td class="num" style="color:var(--avh-primary);font-weight:600">${sold}</td>
-            <td class="num"><b>${remain}</b></td>
-            <td class="num" style="color:var(--avh-success);font-weight:600">¥${rev.toFixed(2)}</td>
-            <td style="min-width:260px">
+            <td data-label="#">${p.id}</td>
+            <td data-label="货品"><b>${p.name}</b>${soldOutBadge}<div style="font-size:12px;color:var(--avh-muted-foreground)">${p.unit} · 到期 ${p.date}</div></td>
+            <td data-label="定价" style="color:var(--avh-primary);font-weight:600">${p.priceLabel}</td>
+            <td data-label="初始" class="num">${p.total}</td>
+            <td data-label="已定" class="num" style="color:var(--avh-primary);font-weight:600">${sold}</td>
+            <td data-label="剩余" class="num"><b>${remain}</b></td>
+            <td data-label="已收" class="num" style="color:var(--avh-success);font-weight:600">¥${rev.toFixed(2)}</td>
+            <td data-label="进度" style="min-width:260px">
               <div class="bar"><i style="width:${pct}%"></i></div>
               <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:6px">
                 <div style="font-size:11px;color:var(--avh-muted-foreground)">${pct}%</div>
@@ -1477,12 +1831,12 @@
         sumQty += r.qty; sumTotal += r.total;
         html += `
           <tr>
-            <td style="font-weight:600">${escapeHtml(r.name)}</td>
-            <td style="color:var(--avh-muted-foreground);font-size:13px">${escapeHtml(r.contact || '—')}</td>
-            <td class="num">${r.nOrders}</td>
-            <td class="num">${r.qty}</td>
-            <td class="num" style="color:var(--avh-primary);font-weight:600">¥${r.total.toFixed(2)}</td>
-            <td style="font-size:12px;color:var(--avh-muted-foreground);font-variant-numeric:tabular-nums">${escapeHtml(r.firstTime || '—')}</td>
+            <td data-label="姓名" style="font-weight:600">${escapeHtml(r.name)}</td>
+            <td data-label="联系方式" style="color:var(--avh-muted-foreground);font-size:13px">${escapeHtml(r.contact || '—')}</td>
+            <td data-label="订单数" class="num">${r.nOrders}</td>
+            <td data-label="商品数" class="num">${r.qty}</td>
+            <td data-label="总金额" class="num" style="color:var(--avh-primary);font-weight:600">¥${r.total.toFixed(2)}</td>
+            <td data-label="首次下单" style="font-size:12px;color:var(--avh-muted-foreground);font-variant-numeric:tabular-nums">${escapeHtml(r.firstTime || '—')}</td>
           </tr>`;
       });
       html += `
@@ -1494,6 +1848,35 @@
           <td></td>
         </tr>`;
       body.innerHTML = html;
+    }
+
+    function getFilteredOrders() {
+      let result = orders.map((o, idx) => ({ idx, o }));
+      const name = document.getElementById('filterName')?.value || '';
+      const product = document.getElementById('filterProduct')?.value || '';
+      const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+      const dateTo = document.getElementById('filterDateTo')?.value || '';
+      const picked = document.getElementById('filterPicked')?.value || '';
+      if (name) result = result.filter(({ o }) => o.name === name);
+      if (product) result = result.filter(({ o }) => (o.items || []).some(it => String(it.id) === product));
+      if (dateFrom) result = result.filter(({ o }) => o.time >= dateFrom);
+      if (dateTo) result = result.filter(({ o }) => o.time <= dateTo + ' 23:59:59');
+      if (picked === 'pending') result = result.filter(({ o }) => !o.pickedUp);
+      if (picked === 'picked') result = result.filter(({ o }) => o.pickedUp);
+      return result;
+    }
+
+    function updateFilterOptions() {
+      const nameSel = document.getElementById('filterName');
+      const prodSel = document.getElementById('filterProduct');
+      if (!nameSel || !prodSel) return;
+      const names = [...new Set(orders.map(o => o.name).filter(Boolean))].sort();
+      const currentName = nameSel.value;
+      nameSel.innerHTML = '<option value="">全部姓名</option>' + names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      nameSel.value = currentName;
+      const currentProd = prodSel.value;
+      prodSel.innerHTML = '<option value="">全部商品</option>' + PRODUCTS.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+      prodSel.value = currentProd;
     }
 
     let orderTabFilter = 'all';

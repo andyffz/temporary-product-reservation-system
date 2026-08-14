@@ -18,10 +18,9 @@ export async function onRequestPost({ request, env }) {
     return json({ error: '请求格式错误' }, 400);
   }
 
-  const idx = Number(body.idx);
+  // 支持两种模式：按索引 idx 或按取货码 pickupCode
+  const hasPickupCode = body.pickupCode && typeof body.pickupCode === 'string';
   const pickedUp = body.pickedUp === true || body.pickedUp === 'true' || body.pickedUp === 1;
-
-  if (!Number.isInteger(idx) || idx < 0) return json({ error: '订单索引无效' }, 400);
 
   let state;
   try {
@@ -32,7 +31,19 @@ export async function onRequestPost({ request, env }) {
   }
   if (!Array.isArray(state.orders)) state.orders = [];
 
-  if (idx >= state.orders.length) return json({ error: '订单不存在' }, 404);
+  let idx;
+
+  if (hasPickupCode) {
+    // 按取货码查找
+    const code = body.pickupCode.trim().toUpperCase();
+    idx = state.orders.findIndex(o => (o.pickupCode || '').toUpperCase() === code);
+    if (idx === -1) return json({ error: '取货码无效' }, 404);
+  } else {
+    // 按索引查找
+    idx = Number(body.idx);
+    if (!Number.isInteger(idx) || idx < 0) return json({ error: '订单索引无效' }, 400);
+    if (idx >= state.orders.length) return json({ error: '订单不存在' }, 404);
+  }
 
   state.orders[idx].pickedUp = pickedUp;
   if (pickedUp && !state.orders[idx].pickedUpAt) {
