@@ -1,6 +1,7 @@
-// 共享：货品定义、初始库存、CORS 工具
+// 共享：默认货品定义、KV 商品动态存储、库存/价格计算、CORS 工具、管理员鉴权
 
-export const PRODUCTS = [
+// 默认商品列表（首次启动时写入 KV，之后从 KV 动态读取）
+export const DEFAULT_PRODUCTS = [
   { id: 1, name: '海笋',            unit: '包', price: 10,    priceLabel: '10 元 3 包',   step: 3, total: 18, date: '2026.8.2',    dateType: 'expired', note: '已过期' },
   { id: 2, name: '光中杏仁',        unit: '包', price: 12,    priceLabel: '12 元 / 包',   step: 1, total: 5,  date: '2026.12.16',  dateType: 'ok' },
   { id: 3, name: '芥末花生',        unit: '罐', price: 5,     priceLabel: '5 元 / 罐',    step: 1, total: 5,  date: '2026.1 生产', dateType: 'ok' },
@@ -10,10 +11,122 @@ export const PRODUCTS = [
   { id: 7, name: '斋九福素鱼香肉丝', unit: '袋', price: 14.9,  priceLabel: '14.9 元 / 袋（买二赠一）', step: 1, total: 36, date: '2026.10.16',  dateType: 'ok', deal: '买二赠一' }
 ];
 
-export function initialState() {
+const PRODUCTS_KV_KEY = 'products';
+
+/**
+ * 从 KV 读取商品列表。
+ * 首次访问时用 DEFAULT_PRODUCTS 初始化 KV。
+ */
+export async function getProducts(env) {
+  const kv = env.T1_KV;
+  if (!kv) return DEFAULT_PRODUCTS.map(p => ({ ...p }));
+  try {
+    const raw = await kv.get(PRODUCTS_KV_KEY);
+    if (raw) {
+      const products = JSON.parse(raw);
+      if (Array.isArray(products)) return products;
+    }
+    // KV 中无商品 → 用默认列表初始化
+    await kv.put(PRODUCTS_KV_KEY, JSON.stringify(DEFAULT_PRODUCTS));
+    return DEFAULT_PRODUCTS.map(p => ({ ...p }));
+  } catch (e) {
+    return DEFAULT_PRODUCTS.map(p => ({ ...p }));
+  }
+}
+
+/** 保存商品列表到 KV */
+export async function saveProducts(env, products) {
+  const kv = env.T1_KV;
+  if (!kv) throw new Error('KV 未绑定');
+  await kv.put(PRODUCTS_KV_KEY, JSON.stringify(products));
+}
+
+/** 生成下一个商品 ID（max+1） */
+export function nextProductId(products) {
+  if (!products || products.length === 0) return 1;
+  return Math.max(...products.map(p => Number(p.id) || 0)) + 1;
+}
+
+/**
+ * 根据商品列表生成初始状态。
+ * @param {Array} products - 商品数组（来自 KV）
+ */
+export function initialState(products) {
   const stock = {};
-  PRODUCTS.forEach(p => { stock[p.id] = p.total; });
+  (products || []).forEach(p => { stock[p.id] = p.total; });
   return { stock, orders: [] };
+}
+
+// ========== 管理员账号 & Session 鉴权 ==========
+// 管理员密码：部署时通过环境变量 ADMIN_PASSWORD 覆盖，本地开发默认 admin123
+export const ADMIN_USERNAME = 'admin';
+export function getAdminPassword(env) {
+  return (env && env.ADMIN_PASSWORD && String(env.ADMIN_PASSWORD).trim()) || 'admin123';
+}
+
+// Session TTL：7 天（毫秒）
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+function sessionKey(token) { return 'session_' + token; }
+
+// 生成 32 字符安全随机 token
+export function generateToken() {
+  const bytes = new Uint8Array(24);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// 创建 Session 写入 KV
+export async function createSession(env, username) {
+  const kv = env.T1_KV;
+  if (!kv) throw new Error('KV 未绑定');
+  const token = generateToken();
+  const session = { username, createdAt: Date.now(), expiresAt: Date.now() + SESSION_TTL_MS };
+  await kv.put(sessionKey(token), JSON.stringify(session), { expirationTtl: Math.floor(SESSION_TTL_MS / 1000) });
+  return { token, session };
+}
+
+// 解析 Authorization: Bearer <token> / Cookie 中的 token
+function extractToken(request) {
+  const auth = request.headers.get('authorization') || '';
+  const bearer = auth.match(/^Bearer\s+([A-Za-z0-9._~+-]+)$/i);
+  if (bearer) return bearer[1];
+  // 备用：Cookie
+  const cookie = request.headers.get('cookie') || '';
+  const m = cookie.match(/(?:^|;\s*)admin_token=([^;]+)/);
+  return m ? m[1] : null;
+}
+
+/**
+ * 鉴权中间件：管理 API 开头调用此函数
+ * @returns {{ok:true, username:string, token:string}} 校验通过
+ * @returns {Response} 校验失败直接返回 401 响应（调用方要 instanceof 判断）
+ */
+export async function requireAuth(request, env) {
+  const kv = env.T1_KV;
+  if (!kv) return json({ error: '服务器未绑定 KV' }, 500);
+  const token = extractToken(request);
+  if (!token) return json({ error: '未登录，请先登录管理员账号' }, 401);
+  let raw;
+  try { raw = await kv.get(sessionKey(token)); } catch (e) { return json({ error: '读取 Session 失败' }, 500); }
+  if (!raw) return json({ error: '登录已过期，请重新登录' }, 401);
+  let session;
+  try { session = JSON.parse(raw); } catch (e) { return json({ error: 'Session 损坏' }, 401); }
+  if (!session || !session.expiresAt || session.expiresAt < Date.now()) {
+    try { await kv.delete(sessionKey(token)); } catch (_) {}
+    return json({ error: '登录已过期，请重新登录' }, 401);
+  }
+  return { ok: true, username: session.username || ADMIN_USERNAME, token };
+}
+
+// 销毁 Session
+export async function destroySession(env, token) {
+  const kv = env.T1_KV;
+  if (!kv || !token) return;
+  try { await kv.delete(sessionKey(token)); } catch (_) {}
 }
 
 // 买二赠一：赠品数 = floor(qty / 2)，库存扣 qty + 赠品，付款只算 qty

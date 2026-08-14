@@ -1,10 +1,13 @@
-import { PRODUCTS, handleOptions, initialState, json } from './_lib.js';
+import { getProducts, handleOptions, initialState, json, requireAuth } from './_lib.js';
 
 export async function onRequestOptions() {
   return handleOptions();
 }
 
 export async function onRequestPost({ request, env }) {
+  const auth = await requireAuth(request, env);
+  if (auth instanceof Response) return auth;
+
   const kv = env.T1_KV;
   if (!kv) return json({ error: 'KV 未绑定' }, 500);
 
@@ -16,7 +19,10 @@ export async function onRequestPost({ request, env }) {
   }
 
   const id = Number(body.id);
-  const p = PRODUCTS.find(x => x.id === id);
+
+  // 从 KV 读取动态商品
+  const products = await getProducts(env);
+  const p = products.find(x => x.id === id);
   if (!p) return json({ error: '货品不存在' }, 400);
 
   // 两种模式：直接设置新值(set) 或 相对增减(delta)
@@ -30,9 +36,9 @@ export async function onRequestPost({ request, env }) {
   let state;
   try {
     const raw = await kv.get('state');
-    state = raw ? JSON.parse(raw) : initialState();
+    state = raw ? JSON.parse(raw) : initialState(products);
   } catch (e) {
-    state = initialState();
+    state = initialState(products);
   }
   if (!state.stock) state.stock = {};
 
