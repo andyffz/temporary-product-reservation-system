@@ -1248,6 +1248,7 @@
     function productById(id) { return PRODUCTS.find(p => p.id === Number(id)); }
 
     function renderAll() {
+      updateFilterOptions();
       renderKPI();
       renderStockSummary();
       renderProductList();
@@ -1498,15 +1499,7 @@
     let orderTabFilter = 'all';
     function renderOrdersList() {
       const box = document.getElementById('ordersWrap');
-      const kw = (document.getElementById('searchInput').value || '').trim().toLowerCase();
-      let list = orders.map((o, i) => ({ idx: i, o }));
-      if (kw) {
-        list = list.filter(({ o }) => {
-          const hay = [o.name, o.contact, o.note,
-          ...(o.items || []).map(it => it.name)].join(' ').toLowerCase();
-          return hay.includes(kw);
-        });
-      }
+      let list = getFilteredOrders();
       const pending = list.filter(({ o }) => !o.pickedUp).reverse();
       const picked = list.filter(({ o }) => o.pickedUp).reverse();
 
@@ -1518,13 +1511,16 @@
           lines += `<div class="line"><div class="name">${escapeHtml(it.name)}${g > 0 ? ` <span style="color:var(--avh-success);font-weight:600">+${g} 赠</span>` : ''}</div><div class="qty">× ${it.qty} ${escapeHtml(it.unit || '')}</div><div class="sub">¥${(Number(it.subtotal) || 0).toFixed(2)}</div></div>`;
         });
         const isP = !!o.pickedUp;
+        const isChecked = selectedOrders.has(idx);
         return `
-          <div class="order ${isP ? 'picked' : ''}" data-idx="${idx}">
+          <div class="order ${isP ? 'picked' : ''}" data-idx="${idx}" id="order_${idx}">
             <div class="order-head">
               <div class="person">
+                <input type="checkbox" class="order-checkbox" data-batch="${idx}" ${isChecked ? 'checked' : ''}>
                 <span class="id-badge">${orderNo}</span>
                 ${escapeHtml(o.name || '匿名')}
                 ${o.contact ? `<span class="contact">· ${escapeHtml(o.contact)}</span>` : ''}
+                ${o.pickupCode ? `<span class="pickup-badge">🎫 ${escapeHtml(o.pickupCode)}</span>` : ''}
               </div>
               <div class="meta" style="gap:10px">
                 <label class="picked-checkbox ${isP ? 'on' : ''}" title="标记已取货">
@@ -1580,6 +1576,7 @@
         content = pickedHtml || `<div class="empty">暂无已取货订单</div>`;
       }
       box.innerHTML = tabs + content;
+      updateBatchBar();
     }
 
     // Tab 切换
@@ -1650,6 +1647,173 @@
       toast(`${p.name} 库存：${cur} → ${stock[id]}`, 'success');
     }
 
+    // ====== 批量操作 ======
+    function updateBatchBar() {
+      const bar = document.getElementById('batchBar');
+      const countEl = document.getElementById('selCount');
+      const count = selectedOrders.size;
+      bar.style.display = count > 0 ? '' : 'none';
+      countEl.textContent = `已选 ${count} 条`;
+    }
+
+    // 批量选择 checkbox
+    document.addEventListener('change', e => {
+      const cb = e.target.closest('[data-batch]');
+      if (!cb) return;
+      const idx = Number(cb.dataset.batch);
+      if (cb.checked) selectedOrders.add(idx);
+      else selectedOrders.delete(idx);
+      updateBatchBar();
+    });
+
+    // 全选
+    document.getElementById('selectAllChk').addEventListener('change', e => {
+      const checked = e.target.checked;
+      const list = getFilteredOrders();
+      if (checked) {
+        list.forEach(({ idx }) => selectedOrders.add(idx));
+      } else {
+        selectedOrders.clear();
+      }
+      renderOrdersList();
+    });
+
+    // 批量取货
+    document.getElementById('batchPickupBtn').addEventListener('click', async () => {
+      const indices = [...selectedOrders];
+      if (indices.length === 0) return;
+      if (!confirm(`确定将 ${indices.length} 条订单标记为已取货吗？`)) return;
+      try {
+        const res = await authFetch('/api/batchUpdate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'pickup', indices })
+        });
+        const d = await res.json();
+        if (!res.ok) { toast(d.error || '操作失败', 'error'); return; }
+        orders = d.orders || orders;
+        selectedOrders.clear();
+        renderAll();
+        toast(`已批量取货 ${d.affected} 条`, 'success');
+      } catch (err) { if (err.message !== '401 Unauthorized') toast('网络错误', 'error'); }
+    });
+
+    // 批量取消取货
+    document.getElementById('batchCancelPickupBtn').addEventListener('click', async () => {
+      const indices = [...selectedOrders];
+      if (indices.length === 0) return;
+      if (!confirm(`确定取消 ${indices.length} 条订单的取货标记吗？`)) return;
+      try {
+        const res = await authFetch('/api/batchUpdate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'cancelPickup', indices })
+        });
+        const d = await res.json();
+        if (!res.ok) { toast(d.error || '操作失败', 'error'); return; }
+        orders = d.orders || orders;
+        selectedOrders.clear();
+        renderAll();
+        toast(`已批量取消取货 ${d.affected} 条`, 'success');
+      } catch (err) { if (err.message !== '401 Unauthorized') toast('网络错误', 'error'); }
+    });
+
+    // 批量删除
+    document.getElementById('batchDeleteBtn').addEventListener('click', async () => {
+      const indices = [...selectedOrders];
+      if (indices.length === 0) return;
+      if (!confirm(`⚠️ 确定删除 ${indices.length} 条订单吗？\n\n此操作无法撤销！`)) return;
+      try {
+        const res = await authFetch('/api/batchUpdate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', indices })
+        });
+        const d = await res.json();
+        if (!res.ok) { toast(d.error || '操作失败', 'error'); return; }
+        orders = d.orders || orders;
+        selectedOrders.clear();
+        renderAll();
+        toast(`已删除 ${d.affected} 条订单`, 'success');
+      } catch (err) { if (err.message !== '401 Unauthorized') toast('网络错误', 'error'); }
+    });
+
+    // ====== 取货码搜索 ======
+    async function searchByPickupCode() {
+      const code = document.getElementById('pickupSearchInput').value.trim().toUpperCase();
+      if (!code) { toast('请输入取货码', 'error'); return; }
+      // 先在本地查找
+      const localIdx = orders.findIndex(o => (o.pickupCode || '').toUpperCase() === code);
+      if (localIdx !== -1) {
+        // 切到全部标签，清除筛选，滚动到订单
+        orderTabFilter = 'all';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('filterName').value = '';
+        document.getElementById('filterProduct').value = '';
+        document.getElementById('filterDateFrom').value = '';
+        document.getElementById('filterDateTo').value = '';
+        document.getElementById('filterPicked').value = '';
+        renderOrdersList();
+        setTimeout(() => {
+          const el = document.getElementById('order_' + localIdx);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight');
+            setTimeout(() => el.classList.remove('highlight'), 2000);
+          }
+        }, 100);
+        toast(`找到订单：${orders[localIdx].name || '匿名'} · ¥${(orders[localIdx].total || 0).toFixed(2)}`, 'success');
+        return;
+      }
+      // 本地未找到，尝试通过API查找并标记取货
+      if (!confirm(`取货码 ${code}：本地未找到对应订单。\n\n是否通过服务器查询并直接标记取货？`)) return;
+      try {
+        const res = await authFetch('/api/updateOrder', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ pickupCode: code, pickedUp: true })
+        });
+        const d = await res.json();
+        if (!res.ok) { toast(d.error || '取货码无效', 'error'); return; }
+        // 刷新数据
+        await refreshData();
+        toast(`取货码 ${code}：已标记取货 ✓`, 'success');
+      } catch (err) { if (err.message !== '401 Unauthorized') toast('网络错误', 'error'); }
+    }
+
+    document.getElementById('pickupSearchBtn').addEventListener('click', searchByPickupCode);
+    document.getElementById('pickupSearchInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') searchByPickupCode();
+    });
+
+    // ====== 筛选事件 ======
+    ['filterName', 'filterProduct', 'filterDateFrom', 'filterDateTo', 'filterPicked'].forEach(id => {
+      document.getElementById(id).addEventListener('change', renderOrdersList);
+    });
+    document.getElementById('clearFilterBtn').addEventListener('click', () => {
+      ['filterName', 'filterProduct', 'filterDateFrom', 'filterDateTo', 'filterPicked'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      renderOrdersList();
+    });
+
+    // ====== 数据刷新 ======
+    async function refreshData() {
+      if (apiMode) {
+        try {
+          const res = await fetch('/api/state');
+          const data = await res.json();
+          if (data && data.stock) {
+            stock = data.stock;
+            orders = data.orders || [];
+            PRODUCTS = data.products || PRODUCTS;
+          }
+        } catch (e) { toast('刷新失败', 'error'); return; }
+      } else { loadLocal(); }
+      updateFilterOptions();
+      renderAll();
+    }
+
     document.getElementById('searchInput').addEventListener('input', renderOrdersList);
     document.getElementById('clearSearchBtn').addEventListener('click', () => {
       document.getElementById('searchInput').value = ''; renderOrdersList();
@@ -1716,21 +1880,27 @@
     });
 
     document.getElementById('exportOrdersBtn').addEventListener('click', () => {
-      let csv = csvRow(['订单号', '姓名', '联系方式', '备注', '下单时间', '商品', '数量', '单位', '小计', '订单总金额']);
-      orders.forEach((o, idx) => {
+      const filtered = getFilteredOrders();
+      let csv = csvRow(['订单号', '取货码', '姓名', '联系方式', '备注', '下单时间', '取货状态', '取货时间', '商品', '数量', '单位', '小计', '订单总金额']);
+      filtered.forEach(({ idx, o }) => {
         const orderNo = 'Y' + String(idx + 1).padStart(3, '0');
+        const pickedStatus = o.pickedUp ? '已取货' : '未取货';
         (o.items || []).forEach((it, i) => {
           csv += csvRow([
             orderNo,
+            o.pickupCode || '',
             o.name || '', o.contact || '', i === 0 ? (o.note || '') : '',
             i === 0 ? (o.time || '') : '',
+            i === 0 ? pickedStatus : '',
+            i === 0 ? (o.pickedUpAt || '') : '',
             it.name || '', it.qty || 0, it.unit || '', (it.subtotal || 0).toFixed(2),
             i === 0 ? (o.total || 0).toFixed(2) : ''
           ]);
         });
       });
-      download('全部订单_' + todayStr() + '.csv', csv);
-      toast('已导出全部订单 CSV', 'success');
+      const suffix = filtered.length < orders.length ? `_筛选${filtered.length}条` : '';
+      download('全部订单' + suffix + '_' + todayStr() + '.csv', csv);
+      toast(`已导出 ${filtered.length} 条订单 CSV`, 'success');
     });
 
     function todayStr() {

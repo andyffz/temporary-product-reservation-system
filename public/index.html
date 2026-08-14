@@ -1575,6 +1575,7 @@
       document.getElementById('orderSummary').innerHTML = `
         <div class="row k"><span>预定人</span><b>${escapeHtml(order.name)}${order.contact ? ' · ' + escapeHtml(order.contact) : ''}</b></div>
         <div class="row k"><span>下单时间</span><b>${escapeHtml(order.time)}</b></div>
+        ${order.pickupCode ? `<div class="row k" style="background:var(--avh-info-soft);padding:8px 12px;border-radius:8px;margin:6px 0"><span style="font-weight:600">🎫 取货码</span><b style="font-size:20px;font-family:monospace;letter-spacing:.1em;color:var(--avh-info)">${escapeHtml(order.pickupCode)}</b></div>` : ''}
         ${lines}
         ${order.note ? `<div class="row k"><span>备注</span><b>${escapeHtml(order.note)}</b></div>` : ''}
       `;
