@@ -1,10 +1,13 @@
-import { initialState, json, handleOptions } from './_lib.js';
+import { initialState, json, handleOptions, requireAuth } from './_lib.js';
 
 export async function onRequestOptions() {
   return handleOptions();
 }
 
-export async function onRequestPost({ env }) {
+export async function onRequestPost({ request, env }) {
+  const auth = await requireAuth(request, env);
+  if (auth instanceof Response) return auth;
+
   const kv = env.T1_KV;
   if (!kv) return json({ error: 'KV 未绑定' }, 500);
 

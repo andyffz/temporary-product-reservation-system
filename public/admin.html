@@ -655,6 +655,135 @@
       background: #B3261E;
     }
 
+    /* ===== 登录页 ===== */
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-card {
+      background: var(--avh-card);
+      border: 1px solid var(--avh-border);
+      border-radius: 16px;
+      box-shadow: var(--avh-shadow-3);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .login-card h1 {
+      font-family: var(--avh-font-display);
+      margin: 0 0 6px;
+      font-size: 24px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .login-card .subtitle {
+      color: var(--avh-muted-foreground);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    .login-field {
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .login-field label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .login-field input {
+      padding: 12px 14px;
+      border: 1px solid var(--avh-border);
+      border-radius: var(--avh-radius-sm);
+      font-size: 15px;
+      font-family: inherit;
+      background: var(--avh-card);
+      color: var(--avh-foreground);
+      width: 100%;
+    }
+
+    .login-field input:focus {
+      outline: none;
+      border-color: var(--avh-primary);
+      box-shadow: 0 0 0 3px var(--avh-primary-soft);
+    }
+
+    .login-btn {
+      width: 100%;
+      background: var(--avh-primary);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: var(--avh-radius-sm);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      margin-top: 8px;
+      min-height: 44px;
+    }
+
+    .login-btn:active:not(:disabled) {
+      background: var(--avh-primary-hover);
+    }
+
+    .login-btn:disabled {
+      background: var(--avh-muted);
+      color: var(--avh-muted-foreground);
+      cursor: not-allowed;
+    }
+
+    .login-tip {
+      margin-top: 18px;
+      padding: 12px 14px;
+      background: var(--avh-muted);
+      border-radius: var(--avh-radius-sm);
+      font-size: 12px;
+      color: var(--avh-muted-foreground);
+      line-height: 1.6;
+    }
+
+    .login-tip b {
+      color: var(--avh-foreground);
+    }
+
+    .user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 10px 5px 12px;
+      background: var(--avh-success-soft);
+      color: var(--avh-success);
+      border-radius: 9999px;
+    }
+
+    .user-chip .logout {
+      background: none;
+      border: none;
+      color: var(--avh-success);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 0 4px;
+      opacity: .85;
+    }
+
+    .user-chip .logout:hover {
+      opacity: 1;
+    }
+
     @media (max-width: 640px) {
       .kpi .value {
         font-size: 22px;
@@ -669,12 +798,44 @@
 </head>
 
 <body>
-  <div class="wrap">
+  <!-- 登录页 -->
+  <div class="login-wrap" id="loginView">
+    <div class="login-card">
+      <h1>🔐 管理员登录</h1>
+      <div class="subtitle">订单统计 · 云仓调回货品 · 后台管理</div>
+      <form id="loginForm" autocomplete="on">
+        <div class="login-field">
+          <label for="loginUser">用户名</label>
+          <input id="loginUser" name="username" type="text" required placeholder="请输入用户名" autocomplete="username"
+            value="admin">
+        </div>
+        <div class="login-field">
+          <label for="loginPass">密码</label>
+          <input id="loginPass" name="password" type="password" required placeholder="请输入密码"
+            autocomplete="current-password">
+        </div>
+        <button type="submit" class="login-btn" id="loginBtn">登录</button>
+      </form>
+      <div class="login-tip">
+        💡 <b>本地默认账号</b><br>
+        用户名：<code>admin</code><br>
+        密码：<code>admin123</code><br>
+        <span style="opacity:.85">部署时可通过环境变量 ADMIN_PASSWORD 修改密码。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理后台主视图 -->
+  <div class="wrap" id="adminView" style="display:none">
     <div class="topbar">
       <h1><span class="ico">📊</span>订单统计 · 云仓调回货品
         <span class="mode-pill local" id="modePill"><span class="mode-dot"></span><span id="modeText">本地模式</span></span>
       </h1>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="user-chip" id="userChip">
+          <span id="userName">admin</span>
+          <button class="logout" id="logoutBtn" type="button" title="退出登录">✕ 登出</button>
+        </span>
         <button class="btn" id="refreshBtn" type="button">🔄 刷新</button>
         <a class="back" href="./index.html">← 返回下单页</a>
       </div>
@@ -788,10 +949,91 @@
     ];
     const STORAGE_STOCK = 't1_stock';
     const STORAGE_ORDERS = 't1_orders';
+    const TOKEN_KEY = 'admin_token';
+    const USER_KEY = 'admin_username';
 
     let apiMode = false;
     let stock = {};
     let orders = [];
+
+    // ====== Token 管理 ======
+    function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+    function setToken(t) { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); }
+    function getSavedUser() { return localStorage.getItem(USER_KEY) || ''; }
+    function setSavedUser(u) { u ? localStorage.setItem(USER_KEY, u) : localStorage.removeItem(USER_KEY); }
+    function clearAuth() { setToken(''); setSavedUser(''); }
+
+    // 带 Authorization 头的 fetch
+    async function authFetch(url, options = {}) {
+      const headers = options.headers || {};
+      const token = getToken();
+      if (token) headers['authorization'] = 'Bearer ' + token;
+      options.headers = headers;
+      const res = await fetch(url, options);
+      // 401 自动登出
+      if (res.status === 401) {
+        let msg = '登录已过期';
+        try { const d = await res.json(); if (d && d.error) msg = d.error; } catch (_) { }
+        clearAuth();
+        showLogin(msg);
+        throw new Error('401 Unauthorized');
+      }
+      return res;
+    }
+
+    // ====== 视图切换 ======
+    function showLogin(errorMsg) {
+      document.getElementById('loginView').style.display = '';
+      document.getElementById('adminView').style.display = 'none';
+      if (errorMsg) toast(errorMsg, 'error');
+      document.getElementById('loginPass').focus();
+    }
+    function showAdmin() {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('adminView').style.display = '';
+      const u = getSavedUser();
+      if (u) document.getElementById('userName').textContent = u;
+    }
+
+    // ====== 登录 ======
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPass').value;
+      if (!username || !password) { toast('请输入用户名和密码', 'error'); return; }
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = '登录中…';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const d = await res.json();
+        if (!res.ok || !d.token) { toast(d.error || '登录失败', 'error'); return; }
+        setToken(d.token);
+        setSavedUser(d.username || username);
+        toast('登录成功 ✓', 'success');
+        await initAfterLogin();
+      } catch (err) {
+        toast('网络错误，请重试', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '登录';
+      }
+    });
+
+    // ====== 登出 ======
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      const token = getToken();
+      if (token) {
+        try {
+          await authFetch('/api/logout', { method: 'POST' });
+        } catch (_) { /* 忽略 */ }
+      }
+      clearAuth();
+      toast('已退出登录', 'success');
+      showLogin();
+    });
 
     function setMode(isApi) {
       apiMode = isApi;
@@ -817,7 +1059,8 @@
     function saveLocalStock() { localStorage.setItem(STORAGE_STOCK, JSON.stringify(stock)); }
     function saveLocalOrders() { localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders)); }
 
-    async function init() {
+    async function initAfterLogin() {
+      showAdmin();
       try {
         const res = await fetch('/api/state', { method: 'GET' });
         if (!res.ok) throw new Error();
@@ -829,6 +1072,24 @@
         setMode(false);
       }
       renderAll();
+    }
+
+    // 初始化：检查本地 token → 调用 /api/me 校验 → 通过则进入后台，否则显示登录页
+    async function init() {
+      const token = getToken();
+      if (token) {
+        try {
+          const res = await authFetch('/api/me', { method: 'GET' });
+          const d = await res.json();
+          if (res.ok && d && d.authenticated) {
+            if (d.username) setSavedUser(d.username);
+            await initAfterLogin();
+            return;
+          }
+        } catch (_) { /* token 无效，继续显示登录页 */ }
+        clearAuth();
+      }
+      showLogin();
     }
 
     function productById(id) { return PRODUCTS.find(p => p.id === Number(id)); }
@@ -1048,7 +1309,7 @@
       const pickedUp = cb.checked;
       if (apiMode) {
         try {
-          const res = await fetch('/api/updateOrder', {
+          const res = await authFetch('/api/updateOrder', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ idx, pickedUp })
@@ -1056,7 +1317,7 @@
           const d = await res.json();
           if (!res.ok) { toast(d.error || '操作失败', 'error'); cb.checked = !pickedUp; return; }
           orders[idx] = d.order;
-        } catch (err) { toast('网络错误', 'error'); cb.checked = !pickedUp; return; }
+        } catch (err) { if (err.message !== '401 Unauthorized') toast('网络错误', 'error'); cb.checked = !pickedUp; return; }
       } else {
         orders[idx].pickedUp = pickedUp;
         if (pickedUp) {
@@ -1083,7 +1344,7 @@
       if (mode === 'delta' && target === cur) { toast('库存不能为负', 'error'); return; }
       if (apiMode) {
         try {
-          const res = await fetch('/api/updateStock', {
+          const res = await authFetch('/api/updateStock', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(mode === 'set' ? { id, set: target } : { id, delta: val })
@@ -1091,7 +1352,7 @@
           const d = await res.json();
           if (!res.ok || !d.stock) { toast(d.error || '操作失败', 'error'); return; }
           stock = d.stock;
-        } catch (err) { toast('网络错误', 'error'); return; }
+        } catch (err) { if (err.message !== '401 Unauthorized') toast('网络错误', 'error'); return; }
       } else {
         stock[id] = target;
         saveLocalStock();
@@ -1208,11 +1469,11 @@
       if (!confirm('⚠️ 即将清空全部订单记录（库存保持不变）。\n\n此操作无法撤销，确定继续吗？')) return;
       if (apiMode) {
         try {
-          const res = await fetch('/api/clearOrders', { method: 'POST' });
+          const res = await authFetch('/api/clearOrders', { method: 'POST' });
           const data = await res.json();
           if (res.ok && data.state) { orders = data.state.orders || []; }
           else { toast(data.error || '清空失败', 'error'); return; }
-        } catch (e) { toast('清空失败', 'error'); return; }
+        } catch (e) { if (e.message !== '401 Unauthorized') toast('清空失败', 'error'); return; }
       } else {
         orders = [];
         localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
@@ -1226,11 +1487,11 @@
       if (!confirm('再次确认：真的要「重置库存 + 清空订单」吗？')) return;
       if (apiMode) {
         try {
-          const res = await fetch('/api/reset', { method: 'POST' });
+          const res = await authFetch('/api/reset', { method: 'POST' });
           const data = await res.json();
           if (res.ok && data.state) { stock = data.state.stock; orders = data.state.orders; }
           else { toast(data.error || '重置失败', 'error'); return; }
-        } catch (e) { toast('重置失败', 'error'); return; }
+        } catch (e) { if (e.message !== '401 Unauthorized') toast('重置失败', 'error'); return; }
       } else {
         PRODUCTS.forEach(p => stock[p.id] = p.total);
         localStorage.setItem(STORAGE_STOCK, JSON.stringify(stock));

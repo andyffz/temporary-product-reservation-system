@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "t1-order",
-  "compatibility_date": "2026-08-12",
+  "compatibility_date": "2026-07-29",
   "pages_build_output_dir": "public",
   "kv_namespaces": [
     {
