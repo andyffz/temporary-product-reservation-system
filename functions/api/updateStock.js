@@ -1,9 +1,15 @@
-import { getProducts, handleOptions, initialState, json, requireAuth } from './_lib.js';
+import {
+  getCampaignStock, saveCampaignStock,
+  getCampaignProducts,
+  handleOptions, json, requireAuth
+} from './_lib.js';
 
 export async function onRequestOptions() {
   return handleOptions();
 }
 
+// POST /api/updateStock → 调整团单商品库存（需鉴权）
+// body: { campaignId, id, set?, delta? }
 export async function onRequestPost({ request, env }) {
   const auth = await requireAuth(request, env);
   if (auth instanceof Response) return auth;
@@ -18,14 +24,13 @@ export async function onRequestPost({ request, env }) {
     return json({ error: '请求格式错误' }, 400);
   }
 
+  const campaignId = Number(body.campaignId) || 1;
   const id = Number(body.id);
 
-  // 从 KV 读取动态商品
-  const products = await getProducts(env);
-  const p = products.find(x => x.id === id);
+  const campaignProducts = await getCampaignProducts(env, campaignId);
+  const p = campaignProducts.find(x => x.productId === id);
   if (!p) return json({ error: '货品不存在' }, 400);
 
-  // 两种模式：直接设置新值(set) 或 相对增减(delta)
   const setVal = body.set != null ? Number(body.set) : null;
   const delta = body.delta != null ? Number(body.delta) : null;
 
@@ -33,27 +38,16 @@ export async function onRequestPost({ request, env }) {
   if (setVal != null && (!Number.isInteger(setVal) || setVal < 0)) return json({ error: '库存值无效' }, 400);
   if (delta != null && !Number.isInteger(delta)) return json({ error: '增减值无效' }, 400);
 
-  let state;
-  try {
-    const raw = await kv.get('state');
-    state = raw ? JSON.parse(raw) : initialState(products);
-  } catch (e) {
-    state = initialState(products);
-  }
-  if (!state.stock) state.stock = {};
+  const stock = await getCampaignStock(env, campaignId);
+  const current = stock[id] ?? p.total;
 
-  const current = state.stock[p.id] ?? p.total;
   if (setVal != null) {
-    state.stock[p.id] = setVal;
+    stock[id] = setVal;
   } else {
-    state.stock[p.id] = Math.max(current + delta, 0);
+    stock[id] = Math.max(current + delta, 0);
   }
 
-  try {
-    await kv.put('state', JSON.stringify(state));
-  } catch (e) {
-    return json({ error: '保存失败' }, 500);
-  }
+  await saveCampaignStock(env, campaignId, stock);
 
-  return json({ ok: true, stock: state.stock });
+  return json({ ok: true, stock });
 }

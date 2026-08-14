@@ -1,9 +1,14 @@
-import { handleOptions, initialState, json, requireAuth } from './_lib.js';
+import {
+  getCampaignOrders, saveCampaignOrders,
+  formatTime, handleOptions, json, requireAuth
+} from './_lib.js';
 
 export async function onRequestOptions() {
   return handleOptions();
 }
 
+// POST /api/batchUpdate → 批量操作订单（需鉴权）
+// body: { campaignId, action: 'pickup'|'cancelPickup'|'delete', indices: [] }
 export async function onRequestPost({ request, env }) {
   const auth = await requireAuth(request, env);
   if (auth instanceof Response) return auth;
@@ -18,7 +23,8 @@ export async function onRequestPost({ request, env }) {
     return json({ error: '请求格式错误' }, 400);
   }
 
-  const action = body.action; // 'pickup' | 'cancelPickup' | 'delete'
+  const campaignId = Number(body.campaignId) || 1;
+  const action = body.action;
   const indices = Array.isArray(body.indices) ? body.indices.map(Number) : [];
 
   if (!action || !['pickup', 'cancelPickup', 'delete'].includes(action)) {
@@ -26,51 +32,38 @@ export async function onRequestPost({ request, env }) {
   }
   if (indices.length === 0) return json({ error: '未选择订单' }, 400);
 
-  let state;
-  try {
-    const raw = await kv.get('state');
-    state = raw ? JSON.parse(raw) : initialState();
-  } catch (e) {
-    state = initialState();
-  }
-  if (!Array.isArray(state.orders)) state.orders = [];
-
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const orders = await getCampaignOrders(env, campaignId);
+  const ts = formatTime(new Date());
   let affected = 0;
 
-  // 按索引降序处理，避免删除时索引偏移
-  const sortedIndices = [...new Set(indices)].filter(i => Number.isInteger(i) && i >= 0 && i < state.orders.length).sort((a, b) => b - a);
+  const sortedIndices = [...new Set(indices)]
+    .filter(i => Number.isInteger(i) && i >= 0 && i < orders.length)
+    .sort((a, b) => b - a);
 
   if (action === 'delete') {
     for (const idx of sortedIndices) {
-      state.orders.splice(idx, 1);
+      orders.splice(idx, 1);
       affected++;
     }
   } else if (action === 'pickup') {
     for (const idx of sortedIndices) {
-      if (!state.orders[idx].pickedUp) {
-        state.orders[idx].pickedUp = true;
-        if (!state.orders[idx].pickedUpAt) state.orders[idx].pickedUpAt = ts;
+      if (!orders[idx].pickedUp) {
+        orders[idx].pickedUp = true;
+        if (!orders[idx].pickedUpAt) orders[idx].pickedUpAt = ts;
         affected++;
       }
     }
   } else if (action === 'cancelPickup') {
     for (const idx of sortedIndices) {
-      if (state.orders[idx].pickedUp) {
-        state.orders[idx].pickedUp = false;
-        delete state.orders[idx].pickedUpAt;
+      if (orders[idx].pickedUp) {
+        orders[idx].pickedUp = false;
+        delete orders[idx].pickedUpAt;
         affected++;
       }
     }
   }
 
-  try {
-    await kv.put('state', JSON.stringify(state));
-  } catch (e) {
-    return json({ error: '保存失败' }, 500);
-  }
+  await saveCampaignOrders(env, campaignId, orders);
 
-  return json({ ok: true, orders: state.orders, affected });
+  return json({ ok: true, orders, affected });
 }

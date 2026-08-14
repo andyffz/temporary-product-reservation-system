@@ -8,9 +8,6 @@ export async function onRequestPost({ request, env }) {
   const auth = await requireAuth(request, env);
   if (auth instanceof Response) return auth;
 
-  const kv = env.T1_KV;
-  if (!kv) return json({ error: 'KV 未绑定' }, 500);
-
   let body;
   try {
     body = await request.json();
@@ -25,7 +22,6 @@ export async function onRequestPost({ request, env }) {
   const idx = products.findIndex(p => p.id === id);
   if (idx === -1) return json({ error: '商品不存在' }, 400);
 
-  // 更新可修改字段
   const p = { ...products[idx] };
 
   if (body.name != null) {
@@ -56,28 +52,9 @@ export async function onRequestPost({ request, env }) {
     const note = body.note.toString().trim();
     if (note) p.note = note; else delete p.note;
   }
-  if (body.deal != null) {
-    const deal = body.deal.toString().trim();
-    if (deal) p.deal = deal; else delete p.deal;
-  }
 
   products[idx] = p;
   await saveProducts(env, products);
-
-  // 如果 total（初始库存）变了，同步更新库存状态
-  if (body.total != null) {
-    let state;
-    try {
-      const raw = await kv.get('state');
-      state = raw ? JSON.parse(raw) : { stock: {}, orders: [] };
-    } catch (e) {
-      state = { stock: {}, orders: [] };
-    }
-    if (!state.stock) state.stock = {};
-    state.stock[id] = body.total;
-    await kv.put('state', JSON.stringify(state));
-    return json({ ok: true, product: p, products, stock: state.stock });
-  }
 
   return json({ ok: true, product: p, products });
 }
