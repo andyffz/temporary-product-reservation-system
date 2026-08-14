@@ -1,6 +1,7 @@
-// 共享：货品定义、初始库存、CORS 工具、管理员鉴权
+// 共享：默认货品定义、KV 商品动态存储、库存/价格计算、CORS 工具、管理员鉴权
 
-export const PRODUCTS = [
+// 默认商品列表（首次启动时写入 KV，之后从 KV 动态读取）
+export const DEFAULT_PRODUCTS = [
   { id: 1, name: '海笋',            unit: '包', price: 10,    priceLabel: '10 元 3 包',   step: 3, total: 18, date: '2026.8.2',    dateType: 'expired', note: '已过期' },
   { id: 2, name: '光中杏仁',        unit: '包', price: 12,    priceLabel: '12 元 / 包',   step: 1, total: 5,  date: '2026.12.16',  dateType: 'ok' },
   { id: 3, name: '芥末花生',        unit: '罐', price: 5,     priceLabel: '5 元 / 罐',    step: 1, total: 5,  date: '2026.1 生产', dateType: 'ok' },
@@ -10,9 +11,49 @@ export const PRODUCTS = [
   { id: 7, name: '斋九福素鱼香肉丝', unit: '袋', price: 14.9,  priceLabel: '14.9 元 / 袋（买二赠一）', step: 1, total: 36, date: '2026.10.16',  dateType: 'ok', deal: '买二赠一' }
 ];
 
-export function initialState() {
+const PRODUCTS_KV_KEY = 'products';
+
+/**
+ * 从 KV 读取商品列表。
+ * 首次访问时用 DEFAULT_PRODUCTS 初始化 KV。
+ */
+export async function getProducts(env) {
+  const kv = env.T1_KV;
+  if (!kv) return DEFAULT_PRODUCTS.map(p => ({ ...p }));
+  try {
+    const raw = await kv.get(PRODUCTS_KV_KEY);
+    if (raw) {
+      const products = JSON.parse(raw);
+      if (Array.isArray(products)) return products;
+    }
+    // KV 中无商品 → 用默认列表初始化
+    await kv.put(PRODUCTS_KV_KEY, JSON.stringify(DEFAULT_PRODUCTS));
+    return DEFAULT_PRODUCTS.map(p => ({ ...p }));
+  } catch (e) {
+    return DEFAULT_PRODUCTS.map(p => ({ ...p }));
+  }
+}
+
+/** 保存商品列表到 KV */
+export async function saveProducts(env, products) {
+  const kv = env.T1_KV;
+  if (!kv) throw new Error('KV 未绑定');
+  await kv.put(PRODUCTS_KV_KEY, JSON.stringify(products));
+}
+
+/** 生成下一个商品 ID（max+1） */
+export function nextProductId(products) {
+  if (!products || products.length === 0) return 1;
+  return Math.max(...products.map(p => Number(p.id) || 0)) + 1;
+}
+
+/**
+ * 根据商品列表生成初始状态。
+ * @param {Array} products - 商品数组（来自 KV）
+ */
+export function initialState(products) {
   const stock = {};
-  PRODUCTS.forEach(p => { stock[p.id] = p.total; });
+  (products || []).forEach(p => { stock[p.id] = p.total; });
   return { stock, orders: [] };
 }
 

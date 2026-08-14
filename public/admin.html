@@ -794,6 +794,67 @@
         align-items: flex-start;
       }
     }
+
+    /* ===== 商品管理表单 ===== */
+    .product-form {
+      background: var(--avh-muted);
+      border-radius: var(--avh-radius-sm);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .product-form h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .form-field {
+      flex: 1;
+      min-width: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--avh-muted-foreground);
+    }
+
+    .form-field input,
+    .form-field select {
+      padding: 8px 10px;
+      border: 1px solid var(--avh-border);
+      border-radius: 5px;
+      font-size: 14px;
+      background: var(--avh-card);
+      font-family: inherit;
+      color: var(--avh-foreground);
+    }
+
+    .form-field input:focus,
+    .form-field select:focus {
+      outline: none;
+      border-color: var(--avh-primary);
+      box-shadow: 0 0 0 2px var(--avh-primary-soft);
+    }
+
+    .mini-btn.danger {
+      color: var(--avh-danger);
+    }
+
+    .mini-btn.danger:hover {
+      border-color: var(--avh-danger);
+    }
   </style>
 </head>
 
@@ -892,6 +953,102 @@
       </div>
     </div>
 
+    <!-- 商品管理 -->
+    <div class="section" id="productMgmtSection">
+      <div class="section-title">
+        <span>🏷️ 商品管理</span>
+        <div class="actions">
+          <button class="btn primary" id="addProductBtn" type="button">+ 添加商品</button>
+        </div>
+      </div>
+
+      <!-- 添加/编辑表单（默认隐藏） -->
+      <div id="productFormBox" style="display:none">
+        <form id="productForm" class="product-form">
+          <h3 id="productFormTitle">添加商品</h3>
+          <input type="hidden" id="editProductId">
+          <div class="form-row">
+            <div class="form-field" style="flex:2">
+              <label>商品名称 *</label>
+              <input type="text" id="pName" required placeholder="如 光中杏仁">
+            </div>
+            <div class="form-field">
+              <label>单位</label>
+              <input type="text" id="pUnit" value="包" placeholder="包/罐/盒/袋">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>单价（元）*</label>
+              <input type="number" id="pPrice" step="0.01" min="0" required placeholder="如 12">
+            </div>
+            <div class="form-field">
+              <label>步进</label>
+              <input type="number" id="pStep" value="1" min="1" placeholder="1=逐个, 3=3个一包">
+            </div>
+            <div class="form-field">
+              <label>初始库存 *</label>
+              <input type="number" id="pTotal" value="0" min="0" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label>日期标注</label>
+              <input type="text" id="pDate" placeholder="如 2026.12.16">
+            </div>
+            <div class="form-field">
+              <label>日期类型</label>
+              <select id="pDateType">
+                <option value="ok">正常</option>
+                <option value="expired">已过期</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>促销</label>
+              <select id="pDeal">
+                <option value="">无</option>
+                <option value="买二赠一">买二赠一</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="flex:2">
+              <label>定价标签（留空自动生成）</label>
+              <input type="text" id="pPriceLabel" placeholder="如 10 元 3 包 / 12 元 / 包">
+            </div>
+            <div class="form-field" style="flex:2">
+              <label>备注</label>
+              <input type="text" id="pNote" placeholder="如 已过期">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button type="submit" class="btn primary" id="saveProductBtn">保存</button>
+            <button type="button" class="btn" id="cancelProductBtn">取消</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 商品列表 -->
+      <div style="overflow-x:auto">
+        <table class="tb">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>商品名称</th>
+              <th>单位</th>
+              <th class="num">单价</th>
+              <th class="num">步进</th>
+              <th class="num">初始库存</th>
+              <th>日期</th>
+              <th>促销</th>
+              <th style="min-width:80px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="productBody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- 按人员汇总 -->
     <div class="section">
       <div class="section-title">
@@ -938,15 +1095,7 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const PRODUCTS = [
-      { id: 1, name: '海笋', unit: '包', price: 10, priceLabel: '10 元 3 包', step: 3, total: 18, date: '2026.8.2' },
-      { id: 2, name: '光中杏仁', unit: '包', price: 12, priceLabel: '12 元 / 包', step: 1, total: 5, date: '2026.12.16' },
-      { id: 3, name: '芥末花生', unit: '罐', price: 5, priceLabel: '5 元 / 罐', step: 1, total: 5, date: '2026.1 生产' },
-      { id: 4, name: '微辣热干面', unit: '包', price: 3, priceLabel: '3 元 / 包', step: 1, total: 1, date: '2025.12 生产' },
-      { id: 5, name: '榛子仁巧克力豆', unit: '盒', price: 10, priceLabel: '10 元 / 盒', step: 1, total: 2, date: '2027.2' },
-      { id: 6, name: '道家火锅料', unit: '包', price: 29.9, priceLabel: '29.9 元 3 包', step: 3, total: 87, date: '2026.11.2' },
-      { id: 7, name: '斋九福素鱼香肉丝', unit: '袋', price: 14.9, priceLabel: '14.9 元 / 袋（买二赠一）', step: 1, total: 36, date: '2026.10.16', deal: '买二赠一' }
-    ];
+    let PRODUCTS = [];
     const STORAGE_STOCK = 't1_stock';
     const STORAGE_ORDERS = 't1_orders';
     const TOKEN_KEY = 'admin_token';
@@ -1065,8 +1214,12 @@
         const res = await fetch('/api/state', { method: 'GET' });
         if (!res.ok) throw new Error();
         const data = await res.json();
-        if (data && data.stock) { stock = data.stock; orders = data.orders || []; setMode(true); }
-        else throw new Error();
+        if (data && data.stock) {
+          stock = data.stock;
+          orders = data.orders || [];
+          PRODUCTS = data.products || PRODUCTS;
+          setMode(true);
+        } else throw new Error();
       } catch (e) {
         loadLocal();
         setMode(false);
@@ -1097,9 +1250,143 @@
     function renderAll() {
       renderKPI();
       renderStockSummary();
+      renderProductList();
       renderPeopleSummary();
       renderOrdersList();
     }
+
+    // ====== 商品管理 ======
+    function renderProductList() {
+      const body = document.getElementById('productBody');
+      if (!PRODUCTS || PRODUCTS.length === 0) {
+        body.innerHTML = '<tr><td colspan="9" class="empty" style="padding:24px">暂无商品</td></tr>';
+        return;
+      }
+      let html = '';
+      const sorted = [...PRODUCTS].sort((a, b) => a.id - b.id);
+      sorted.forEach(p => {
+        const expiredBadge = p.dateType === 'expired' ? ' <span style="color:var(--avh-danger);font-size:11px">⚠过期</span>' : '';
+        const dealTag = p.deal ? `<span class="mode-pill" style="font-size:11px">${escapeHtml(p.deal)}</span>` : '—';
+        html += `
+          <tr>
+            <td>${p.id}</td>
+            <td><b>${escapeHtml(p.name)}</b>${p.note ? `<div style="font-size:12px;color:var(--avh-muted-foreground)">${escapeHtml(p.note)}</div>` : ''}</td>
+            <td>${escapeHtml(p.unit || '')}</td>
+            <td class="num">${p.price}</td>
+            <td class="num">${p.step}</td>
+            <td class="num">${p.total}</td>
+            <td style="font-size:13px;color:var(--avh-muted-foreground)">${escapeHtml(p.date || '—')}${expiredBadge}</td>
+            <td>${dealTag}</td>
+            <td>
+              <button class="mini-btn" type="button" onclick="editProduct(${p.id})" title="编辑">✎</button>
+              <button class="mini-btn danger" type="button" onclick="deleteProduct(${p.id})" title="删除">✕</button>
+            </td>
+          </tr>`;
+      });
+      body.innerHTML = html;
+    }
+
+    function openProductForm(product) {
+      const box = document.getElementById('productFormBox');
+      const titleEl = document.getElementById('productFormTitle');
+      if (product) {
+        document.getElementById('editProductId').value = product.id;
+        document.getElementById('pName').value = product.name || '';
+        document.getElementById('pUnit').value = product.unit || '包';
+        document.getElementById('pPrice').value = product.price || 0;
+        document.getElementById('pStep').value = product.step || 1;
+        document.getElementById('pTotal').value = product.total || 0;
+        document.getElementById('pDate').value = product.date || '';
+        document.getElementById('pDateType').value = product.dateType || 'ok';
+        document.getElementById('pPriceLabel').value = product.priceLabel || '';
+        document.getElementById('pDeal').value = product.deal || '';
+        document.getElementById('pNote').value = product.note || '';
+        titleEl.textContent = '编辑商品：' + product.name;
+      } else {
+        document.getElementById('productForm').reset();
+        document.getElementById('editProductId').value = '';
+        document.getElementById('pUnit').value = '包';
+        document.getElementById('pStep').value = 1;
+        document.getElementById('pTotal').value = 0;
+        document.getElementById('pDateType').value = 'ok';
+        titleEl.textContent = '添加商品';
+      }
+      box.style.display = '';
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeProductForm() {
+      document.getElementById('productFormBox').style.display = 'none';
+    }
+
+    function editProduct(id) {
+      const p = PRODUCTS.find(x => x.id === id);
+      if (p) openProductForm(p);
+    }
+
+    async function deleteProduct(id) {
+      const p = PRODUCTS.find(x => x.id === id);
+      if (!p) return;
+      if (!confirm(`确定删除商品「${p.name}」吗？\n\n该商品的库存也会被移除，已有订单中的记录不受影响。`)) return;
+      try {
+        const res = await authFetch('/api/deleteProduct', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const d = await res.json();
+        if (!res.ok) { toast(d.error || '删除失败', 'error'); return; }
+        PRODUCTS = d.products || PRODUCTS;
+        if (d.stock) stock = d.stock;
+        renderAll();
+        toast(`已删除「${p.name}」`, 'success');
+      } catch (err) {
+        if (err.message !== '401 Unauthorized') toast('网络错误', 'error');
+      }
+    }
+
+    document.getElementById('addProductBtn').addEventListener('click', () => openProductForm(null));
+    document.getElementById('cancelProductBtn').addEventListener('click', closeProductForm);
+
+    document.getElementById('productForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const editId = document.getElementById('editProductId').value;
+      const data = {
+        name: document.getElementById('pName').value.trim(),
+        unit: document.getElementById('pUnit').value.trim(),
+        price: Number(document.getElementById('pPrice').value),
+        step: Number(document.getElementById('pStep').value),
+        total: Number(document.getElementById('pTotal').value),
+        date: document.getElementById('pDate').value.trim(),
+        dateType: document.getElementById('pDateType').value,
+        priceLabel: document.getElementById('pPriceLabel').value.trim(),
+        deal: document.getElementById('pDeal').value,
+        note: document.getElementById('pNote').value.trim()
+      };
+
+      const btn = document.getElementById('saveProductBtn');
+      btn.disabled = true; btn.textContent = '保存中…';
+      try {
+        const url = editId ? '/api/updateProduct' : '/api/addProduct';
+        if (editId) data.id = Number(editId);
+        const res = await authFetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const d = await res.json();
+        if (!res.ok) { toast(d.error || '保存失败', 'error'); return; }
+        PRODUCTS = d.products || PRODUCTS;
+        if (d.stock) stock = d.stock;
+        closeProductForm();
+        renderAll();
+        toast(editId ? '商品已更新 ✓' : '商品已添加 ✓', 'success');
+      } catch (err) {
+        if (err.message !== '401 Unauthorized') toast('网络错误', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '保存';
+      }
+    });
 
     function renderKPI() {
       const nOrders = orders.length;
@@ -1458,7 +1745,11 @@
         try {
           const res = await fetch('/api/state');
           const data = await res.json();
-          if (data && data.stock) { stock = data.stock; orders = data.orders || []; }
+          if (data && data.stock) {
+            stock = data.stock;
+            orders = data.orders || [];
+            PRODUCTS = data.products || PRODUCTS;
+          }
         } catch (e) { toast('刷新失败', 'error'); return; }
       } else { loadLocal(); }
       renderAll();
