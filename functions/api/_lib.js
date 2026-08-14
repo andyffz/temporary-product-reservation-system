@@ -144,6 +144,29 @@ export function calcPrice(product, qty) {
   return qty * product.price;
 }
 
+/**
+ * 生成 6 位取货码（大写字母+数字，去除易混淆的 I/O/0/1）
+ * @param {Array} existingOrders - 现有订单列表，用于避免重复
+ * @returns {string} 6 位取货码
+ */
+export function generatePickupCode(existingOrders = []) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const existingCodes = new Set((existingOrders || []).map(o => o.pickupCode).filter(Boolean));
+  for (let attempt = 0; attempt < 100; attempt++) {
+    let code = '';
+    const bytes = new Uint8Array(6);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(bytes);
+    } else {
+      for (let i = 0; i < 6; i++) bytes[i] = Math.floor(Math.random() * 256);
+    }
+    for (let i = 0; i < 6; i++) code += chars[bytes[i] % chars.length];
+    if (!existingCodes.has(code)) return code;
+  }
+  // 兜底：时间戳后6位
+  return ('XX' + Date.now().toString(36).toUpperCase()).slice(-6);
+}
+
 export function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,

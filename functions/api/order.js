@@ -1,4 +1,4 @@
-import { getProducts, calcGift, calcPrice, calcTake, handleOptions, initialState, json } from './_lib.js';
+import { getProducts, calcGift, calcPrice, calcTake, generatePickupCode, handleOptions, initialState, json } from './_lib.js';
 
 export async function onRequestOptions() {
   return handleOptions();
@@ -69,7 +69,8 @@ export async function onRequestPost({ request, env }) {
     name, contact, note,
     items: orderItems,
     total,
-    time: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+    time: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
+    pickupCode: generatePickupCode(state.orders)
   };
   state.orders.push(order);
 
