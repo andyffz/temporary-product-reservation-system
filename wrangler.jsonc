@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "t1-order",
+  "compatibility_date": "2026-08-12",
+  "pages_build_output_dir": "public",
+  "kv_namespaces": [
+    {
+      "binding": "T1_KV",
+      "id": "c5c205b4bf854b2bab18467eb4a18720"
+    }
+  ]
+}

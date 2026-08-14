@@ -1,0 +1,49 @@
+# 依赖
+node_modules/
+.pnp
+.pnp.js
+
+# Cloudflare / Wrangler 本地状态与缓存（含账号信息，切勿提交）
+.wrangler/
+.dev.vars
+.dev.vars.*
+wrangler-account.json
+pages.json
+
+# 构建产物
+dist/
+build/
+.output/
+.pages/
+
+# 环境变量与密钥
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# 日志
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 临时文件
+*.tmp
+*.bak
+*.cache
