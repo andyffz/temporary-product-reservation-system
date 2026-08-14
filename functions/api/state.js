@@ -1,4 +1,4 @@
-import { initialState, json, handleOptions } from './_lib.js';
+import { getProducts, initialState, json, handleOptions } from './_lib.js';
 
 export async function onRequestOptions() {
   return handleOptions();
@@ -7,6 +7,9 @@ export async function onRequestOptions() {
 export async function onRequestGet({ env }) {
   const kv = env.T1_KV;
   if (!kv) return json({ error: 'KV 未绑定' }, 500);
+
+  // 读取动态商品列表
+  const products = await getProducts(env);
 
   let state;
   try {
@@ -17,8 +20,16 @@ export async function onRequestGet({ env }) {
   }
 
   if (!state) {
-    state = initialState();
+    state = initialState(products);
     await kv.put('state', JSON.stringify(state));
   }
-  return json(state);
+  if (!state.stock) state.stock = {};
+  if (!Array.isArray(state.orders)) state.orders = [];
+
+  // 确保所有当前商品都有库存记录（新添加的商品自动补全）
+  products.forEach(p => {
+    if (state.stock[p.id] == null) state.stock[p.id] = p.total;
+  });
+
+  return json({ ...state, products });
 }
