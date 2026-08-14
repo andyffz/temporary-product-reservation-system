@@ -77,7 +77,7 @@
 
 1. 克隆仓库
    ```bash
-   git clone https://github.com/<your-username>/temporary-product-reservation-system.git
+   git clone https://github.com/andyffz/temporary-product-reservation-system.git
    cd temporary-product-reservation-system
    ```
 
